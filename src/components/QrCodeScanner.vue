@@ -2,17 +2,36 @@
 import { QrcodeStream } from 'vue-qrcode-reader'
 import { PriceService, SdkService } from '../composables'
 
-const emit = defineEmits<{
-  (e: 'scan', data: { address: string, amount: number }): void
-}>()
-
+const address = ref('')
+const amount = ref(0)
+const notes = ref('')
+const usdAmount = ref('$0.00')
+const isLoading = ref(false)
 const error = ref('')
 const isScanning = ref(false)
-const scanResult = ref<{ address: string, amount: number } | null>(null)
-const usdAmount = ref('$0.00')
+
+// Update USD amount when PKOIN amount changes
+watch(amount, async (newAmount) => {
+  if (newAmount > 0) {
+    isLoading.value = true
+    try {
+      const usdValue = await PriceService.convertPkoinToUSD(newAmount)
+      usdAmount.value = PriceService.formatUSD(usdValue)
+    }
+    catch (error) {
+      console.error('Error converting to USD:', error)
+    }
+    finally {
+      isLoading.value = false
+    }
+  }
+  else {
+    usdAmount.value = '$0.00'
+  }
+}, { immediate: true })
 
 // Handle successful QR code scan
-async function onDecode(result: string) {
+async function onDecode(result) {
   try {
     const data = JSON.parse(result)
 
@@ -21,10 +40,10 @@ async function onDecode(result: string) {
       return
     }
 
-    scanResult.value = {
-      address: data.address,
-      amount: data.amount,
-    }
+    // Fill the form with scanned data
+    address.value = data.address
+    amount.value = data.amount
+    notes.value = data.notes || ''
 
     // Calculate USD amount
     const usdValue = await PriceService.convertPkoinToUSD(data.amount)
@@ -32,9 +51,6 @@ async function onDecode(result: string) {
 
     // Stop scanning after successful scan
     isScanning.value = false
-
-    // Emit scan event
-    emit('scan', scanResult.value)
   }
   catch (e) {
     error.value = 'Invalid QR code format'
@@ -43,22 +59,24 @@ async function onDecode(result: string) {
 }
 
 // Handle camera errors
-function onError(err: Error) {
+function onError(err) {
   error.value = `Camera error: ${err.message}`
   console.error('QR scanner error:', err)
 }
 
-// Reset scanner
-function resetScanner() {
-  error.value = ''
-  scanResult.value = null
-  isScanning.value = true
+// Toggle scanner
+function toggleScanner() {
+  isScanning.value = !isScanning.value
+  if (!isScanning.value)
+    error.value = ''
 }
 
 // Send payment
 async function sendPayment() {
-  if (!scanResult.value)
+  if (!address.value || amount.value <= 0) {
+    error.value = 'Please enter a valid address and amount'
     return
+  }
 
   try {
     // Request payment permission if not already granted
@@ -66,89 +84,212 @@ async function sendPayment() {
 
     // Implement payment logic here using the Bastyon SDK
     // This is a placeholder for the actual implementation
-    console.log('Sending payment:', scanResult.value)
+    console.log('Sending payment:', {
+      address: address.value,
+      amount: amount.value,
+      notes: notes.value,
+    })
 
-    // Reset scanner after payment
-    resetScanner()
+    // Reset form after payment
+    resetForm()
   }
   catch (e) {
-    error.value = `Payment error: ${(e as Error).message}`
+    error.value = `Payment error: ${e.message}`
     console.error('Payment error:', e)
   }
 }
 
-// Initialize scanner
-onMounted(() => {
-  isScanning.value = true
+// Reset form
+function resetForm() {
+  address.value = ''
+  amount.value = 0
+  notes.value = ''
+  error.value = ''
+  isScanning.value = false
+}
 
+// Fill form with developer address for donation
+function donateToDevs() {
+  address.value = 'PUg3fuJRCeN1nae2BnZQzW6SodDxRovNS2'
+  notes.value = 'Donation to QR Payment App developer'
+}
+
+// Initialize component
+onMounted(() => {
   // Request camera permission
   SdkService.checkAndRequestPermissions(['camera']).catch((e) => {
-    error.value = `Permission error: ${e.message}`
-    console.error('Permission error:', e)
+    console.error('Camera permission error:', e)
   })
 })
 </script>
 
 <template>
-  <div class="qr-scanner-container">
-    <div v-if="error" class="error-message">
-      {{ error }}
-      <button class="retry-button" @click="resetScanner">
-        Try Again
+  <div class="payment-form">
+    <div class="form-group">
+      <label for="recipient-address">Recipient Address</label>
+      <input
+        id="recipient-address"
+        v-model="address"
+        type="text"
+        placeholder="Enter recipient's PKOIN address"
+        class="form-input"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="payment-amount">Amount (PKOIN)</label>
+      <input
+        id="payment-amount"
+        v-model.number="amount"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="Enter amount"
+        class="form-input"
+      >
+      <div class="usd-conversion">
+        <span v-if="isLoading">Converting...</span>
+        <span v-else>≈ {{ usdAmount }} USD</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="payment-notes">Notes (Optional)</label>
+      <textarea
+        id="payment-notes"
+        v-model="notes"
+        placeholder="Add optional payment notes"
+        class="form-input notes-input"
+        rows="3"
+      />
+    </div>
+
+    <div class="scanner-controls">
+      <button class="scan-btn btn" @click="toggleScanner">
+        <span v-if="!isScanning">Scan QR Code</span>
+        <span v-else>Cancel Scanning</span>
+      </button>
+
+      <button class="send-btn btn" :disabled="!address || amount <= 0" @click="sendPayment">
+        Send Payment
       </button>
     </div>
 
-    <div v-else-if="scanResult" class="scan-result">
-      <h3>Payment Details</h3>
-      <div class="payment-info">
-        <div class="info-row">
-          <span class="label">Address:</span>
-          <span class="value">{{ scanResult.address }}</span>
-        </div>
-        <div class="info-row">
-          <span class="label">Amount:</span>
-          <span class="value">{{ scanResult.amount }} PKOIN</span>
-        </div>
-        <div class="info-row">
-          <span class="label">USD Value:</span>
-          <span class="value">{{ usdAmount }}</span>
-        </div>
-      </div>
-
-      <div class="action-buttons">
-        <button class="cancel-button" @click="resetScanner">
-          Cancel
-        </button>
-        <button class="pay-button" @click="sendPayment">
-          Send Payment
-        </button>
-      </div>
+    <div v-if="error" class="error-message">
+      {{ error }}
     </div>
 
-    <div v-else-if="isScanning" class="scanner">
+    <div v-if="isScanning" class="scanner-container">
       <QrcodeStream @decode="onDecode" @error="onError" />
       <div class="scanner-overlay">
         <div class="scanner-frame" />
       </div>
     </div>
+
+    <div class="donate-container">
+      <button class="donate-btn" @click="donateToDevs">
+        Donate to Developer
+      </button>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.qr-scanner-container {
-  position: relative;
+.payment-form {
   width: 100%;
   max-width: 500px;
   margin: 0 auto;
-  overflow: hidden;
-  border-radius: 0.5rem;
-  background-color: var(--bg-secondary);
+  padding: 1rem;
+  position: relative;
 }
 
-.scanner {
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.25rem;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.notes-input {
+  resize: vertical;
+}
+
+.usd-conversion {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.scanner-controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.btn {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 0.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.scan-btn {
+  background-color: #1890ff;
+  color: white;
+}
+
+.scan-btn:hover {
+  background-color: #40a9ff;
+}
+
+.send-btn {
+  background-color: #52c41a;
+  color: white;
+}
+
+.send-btn:hover {
+  background-color: #73d13d;
+}
+
+.send-btn:disabled {
+  background-color: #d9d9d9;
+  color: #999999;
+  cursor: not-allowed;
+}
+
+.error-message {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  background-color: #fff2f0;
+  border: 1px solid #ffccc7;
+  color: #ff4d4f;
+}
+
+.scanner-container {
   position: relative;
   width: 100%;
   height: 300px;
+  margin: 1rem 0;
+  overflow: hidden;
+  border-radius: 0.5rem;
 }
 
 .scanner-overlay {
@@ -171,75 +312,24 @@ onMounted(() => {
   box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5);
 }
 
-.error-message {
-  padding: 2rem;
+.donate-container {
+  margin-top: 2rem;
   text-align: center;
-  color: #ff4d4f;
 }
 
-.retry-button {
-  margin-top: 1rem;
+.donate-btn {
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 0.25rem;
-  background-color: #1890ff;
-  color: white;
-  cursor: pointer;
-}
-
-.scan-result {
-  padding: 1.5rem;
-}
-
-.scan-result h3 {
-  margin-top: 0;
-  text-align: center;
-}
-
-.payment-info {
-  margin: 1.5rem 0;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.label {
-  font-weight: bold;
+  background-color: transparent;
   color: var(--text-secondary);
-}
-
-.action-buttons {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.cancel-button,
-.pay-button {
-  flex: 1;
-  padding: 0.75rem;
-  border: none;
-  border-radius: 0.25rem;
-  font-weight: bold;
+  font-size: 0.875rem;
   cursor: pointer;
+  transition: color 0.2s ease;
 }
 
-.cancel-button {
-  background-color: #f0f0f0;
-  color: #333;
-}
-
-.pay-button {
-  background-color: #52c41a;
-  color: white;
+.donate-btn:hover {
+  color: #1890ff;
+  text-decoration: underline;
 }
 </style>

@@ -7,6 +7,9 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    PaymentForm: typeof import('./src/components/PaymentForm.vue')['default']
+    QrCodeGenerator: typeof import('./src/components/QrCodeGenerator.vue')['default']
+    QrCodeScanner: typeof import('./src/components/QrCodeScanner.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     TheCounter: typeof import('./src/components/TheCounter.vue')['default']

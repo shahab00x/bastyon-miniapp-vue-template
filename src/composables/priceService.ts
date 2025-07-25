@@ -6,9 +6,7 @@ export class PriceService {
   private static readonly CACHE_DURATION = 5 * 60 * 1000 // 5 minutes in milliseconds
 
   /**
-   * Fetches the current price of PKOIN in USD from CoinMarketCap
-   * We're using a proxy API to avoid CORS issues and API key requirements
-   * In a production environment, you should use a server-side API with proper authentication
+   * Fetches the current price of PKOIN in USD from the Bastyon API
    */
   public static async getPkoinPriceInUSD(): Promise<number> {
     const currentTime = Date.now()
@@ -18,12 +16,11 @@ export class PriceService {
       return this.cachedPrice
 
     try {
-      // In a real app, you would use a proper API with authentication
-      // This is a simplified example using a public API
-      const response = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=pocketnet&vs_currencies=usd')
+      // Get price from the Bastyon QR payment API
+      const response = await axios.get('https://qrpayment.bastyon.ir/pkoin_price')
 
-      if (response.data && response.data.pocketnet && response.data.pocketnet.usd) {
-        this.cachedPrice = response.data.pocketnet.usd
+      if (response.data && typeof response.data === 'number') {
+        this.cachedPrice = response.data
         this.lastFetchTime = currentTime
         return this.cachedPrice
       }

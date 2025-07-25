@@ -3,6 +3,7 @@ import { PriceService, SdkService } from '../composables'
 
 const amount = ref(0)
 const address = ref('')
+const notes = ref('')
 const usdAmount = ref('$0.00')
 const isLoading = ref(false)
 
@@ -73,7 +74,18 @@ onMounted(async () => {
       </div>
     </div>
 
-    <QrCodeGenerator :amount="amount" :address="address" />
+    <div class="form-group">
+      <label for="notes">Notes (Optional)</label>
+      <textarea
+        id="notes"
+        v-model="notes"
+        placeholder="Add optional payment notes"
+        class="form-input notes-input"
+        rows="3"
+      />
+    </div>
+
+    <QrCodeGenerator :amount="amount" :address="address" :notes="notes" />
   </div>
 </template>
 

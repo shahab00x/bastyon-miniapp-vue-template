@@ -5,19 +5,21 @@ import { PriceService } from '../composables'
 const props = defineProps<{
   amount: number
   address: string
+  notes?: string
 }>()
 
 const qrCodeUrl = ref('')
 const usdAmount = ref('$0.00')
 
-// Generate QR code when amount or address changes
+// Generate QR code when amount, address, or notes change
 watch(
-  () => [props.amount, props.address],
-  async ([newAmount, newAddress]) => {
+  () => [props.amount, props.address, props.notes],
+  async ([newAmount, newAddress, newNotes]) => {
     if (newAmount > 0 && newAddress) {
       const paymentData = {
         address: newAddress,
         amount: newAmount,
+        notes: newNotes || '',
         timestamp: Date.now(),
       }
 

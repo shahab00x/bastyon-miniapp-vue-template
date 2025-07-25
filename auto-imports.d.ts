@@ -6,6 +6,7 @@
 export {}
 declare global {
   const EffectScope: typeof import('vue')['EffectScope']
+  const PriceService: typeof import('./src/composables/priceService')['PriceService']
   const SdkService: typeof import('./src/composables/sdkService')['SdkService']
   const asyncComputed: typeof import('@vueuse/core')['asyncComputed']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
@@ -302,6 +303,9 @@ declare global {
   // @ts-ignore
   export type { SdkService, SdkService } from './src/composables/sdkService'
   import('./src/composables/sdkService')
+  // @ts-ignore
+  export type { PriceService, PriceService } from './src/composables/priceService'
+  import('./src/composables/priceService')
 }
 // for vue template auto import
 import { UnwrapRef } from 'vue'
@@ -309,6 +313,7 @@ declare module 'vue' {
   interface GlobalComponents {}
   interface ComponentCustomProperties {
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
+    readonly PriceService: UnwrapRef<typeof import('./src/composables/priceService')['PriceService']>
     readonly SdkService: UnwrapRef<typeof import('./src/composables/sdkService')['SdkService']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
