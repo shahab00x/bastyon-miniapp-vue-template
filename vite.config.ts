@@ -1,7 +1,6 @@
 /// <reference types="vitest" />
 
 import path from 'node:path'
-import fs from 'node:fs'
 import { defineConfig } from 'vite'
 import Vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
@@ -62,9 +61,12 @@ export default defineConfig({
     UnoCSS(),
   ],
   server: {
-    https: {
-      key: fs.readFileSync('./localhost-key.pem'),
-      cert: fs.readFileSync('./localhost.pem'),
+    host: '0.0.0.0',
+    port: 12000,
+    cors: true,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'X-Frame-Options': 'ALLOWALL',
     },
   },
   // https://github.com/vitest-dev/vitest
