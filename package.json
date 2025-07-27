@@ -1,10 +1,10 @@
 {
-  "name": "bastyon-miniapp-vue-template",
+  "name": "bastyon-qr-payment-app",
   "type": "module",
   "version": "1.0.0",
   "private": true,
   "packageManager": "pnpm@9.1.1",
-  "description": "A Vue 3 template project demonstrating how to interact with the Bastyon platform using the Bastyon SDK.",
+  "description": "A QR payment app for the Bastyon network. Send and receive PKTC payments easily with QR codes using the Bastyon SDK.",
   "author": "Pocketnet Team",
   "license": "Apache-2.0",
   "scripts": {
@@ -19,7 +19,11 @@
   },
   "dependencies": {
     "@vueuse/core": "^10.9.0",
+    "qr-scanner": "^1.4.2",
+    "qrcode": "^1.5.4",
+    "qrcode-generator": "^1.4.4",
     "vue": "^3.4.27",
+    "vue-qrcode": "^2.2.0",
     "vue-router": "^4.3.2"
   },
   "devDependencies": {
@@ -27,6 +31,7 @@
     "@iconify-json/carbon": "^1.2.2",
     "@types/bastyon-sdk": "github:DaniilKimlb/types-bastyon-sdk",
     "@types/node": "^20.12.12",
+    "@types/qrcode": "^1.5.5",
     "@unocss/eslint-config": "^0.60.2",
     "@unocss/eslint-plugin": "^0.60.2",
     "@unocss/reset": "^0.60.2",
