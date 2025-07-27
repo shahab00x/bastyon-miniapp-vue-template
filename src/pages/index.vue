@@ -1,52 +1,34 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
-interface Verse {
-  verse: number
-  text: string
-}
-
-interface Chapter {
-  chapter: number
-  verses: Verse[]
-}
-
-interface Book {
+interface BibleBook {
+  abbrev: string
   name: string
-  abbreviation: string
-  chapters: Chapter[]
-}
-
-interface BibleData {
-  metadata: {
-    version: string
-    language: string
-    totalBooks: number
-    totalChapters: number
-    totalVerses: number
-  }
-  books: Book[]
+  chapters: string[][]
 }
 
 defineOptions({
   name: 'BibleApp',
 })
 
-const bibleData = ref<BibleData | null>(null)
-const selectedBook = ref<Book | null>(null)
-const selectedChapter = ref<Chapter | null>(null)
-const selectedVerse = ref<Verse | null>(null)
+const bibleData = ref<BibleBook[] | null>(null)
+const selectedBook = ref<BibleBook | null>(null)
+const selectedChapter = ref<string[] | null>(null)
+const selectedChapterIndex = ref<number | null>(null)
 const isLoading = ref(true)
 const searchQuery = ref('')
 const currentView = ref<'books' | 'chapter' | 'verse'>('books')
 
+// No internal mapping needed since name and abbrev are in the JSON
+
 // Load Bible data from JSON
 onMounted(async () => {
   try {
-    const response = await fetch('/bible.json')
+    const response = await fetch('/en_kjv.json')
     bibleData.value = await response.json()
     isLoading.value = false
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Failed to load Bible data:', error)
     isLoading.value = false
   }
@@ -54,55 +36,60 @@ onMounted(async () => {
 
 // Filter books based on search query
 const filteredBooks = computed(() => {
-  if (!bibleData.value || !searchQuery.value) return bibleData.value?.books || []
-  
+  if (!bibleData.value)
+    return bibleData.value || []
+
   const query = searchQuery.value.toLowerCase()
-  return bibleData.value.books.filter(book => 
-    book.name.toLowerCase().includes(query) || 
-    book.abbreviation.toLowerCase().includes(query)
+  if (!query)
+    return bibleData.value
+
+  return bibleData.value.filter(book =>
+    (book.name.toLowerCase().includes(query)
+      || book.abbrev.toLowerCase().includes(query)),
   )
 })
 
 // Navigation functions
-const selectBook = (book: Book) => {
+function selectBook(book: BibleBook) {
   selectedBook.value = book
   selectedChapter.value = null
-  selectedVerse.value = null
+  selectedChapterIndex.value = null
   currentView.value = 'chapter'
 }
 
-const selectChapter = (chapter: Chapter) => {
-  selectedChapter.value = chapter
-  selectedVerse.value = null
+function selectChapter(chapterIndex: number) {
+  selectedChapterIndex.value = chapterIndex
+  selectedChapter.value = selectedBook.value?.chapters[chapterIndex] || null
   currentView.value = 'verse'
 }
 
-const goBack = () => {
+function goBack() {
   if (currentView.value === 'verse') {
     currentView.value = 'chapter'
-    selectedVerse.value = null
-  } else if (currentView.value === 'chapter') {
+    selectedChapter.value = null
+    selectedChapterIndex.value = null
+  }
+  else if (currentView.value === 'chapter') {
     currentView.value = 'books'
     selectedChapter.value = null
+    selectedChapterIndex.value = null
     selectedBook.value = null
   }
 }
 
-const shareVerse = (book: Book, chapter: Chapter, verse: Verse) => {
-  const text = `${book.name} ${chapter.chapter}:${verse.verse} - ${verse.text}`
-  
-  // Use Web Share API if available
-  if (navigator.share) {
-    navigator.share({
-      title: 'Bible Verse',
-      text: text,
-      url: window.location.href
+function copyVerse(book: BibleBook, chapterIndex: number, verseIndex: number, verseText: string) {
+  const chapterNumber = chapterIndex + 1
+  const verseNumber = verseIndex + 1
+  const text = `${verseText} - ${book.abbrev} ${chapterNumber}:${verseNumber}`
+
+  // Copy to clipboard
+  navigator.clipboard.writeText(text)
+    .then(() => {
+      console.log('Verse copied to clipboard')
     })
-  } else {
-    // Fallback: copy to clipboard
-    navigator.clipboard.writeText(text)
-    alert('Verse copied to clipboard!')
-  }
+    .catch((err) => {
+      console.error('Failed to copy: ', err)
+    })
 }
 </script>
 
@@ -115,48 +102,56 @@ const shareVerse = (book: Book, chapter: Chapter, verse: Verse) => {
           <span class="icon">📖</span>
           Holy Bible
         </h1>
-        <p class="app-subtitle">King James Version</p>
+        <p class="app-subtitle">
+          King James Version
+        </p>
       </div>
     </header>
 
     <!-- Navigation -->
-    <nav class="breadcrumb-nav" v-if="currentView !== 'books'">
-      <button @click="goBack" class="back-btn">
+    <nav v-if="currentView !== 'books'" class="breadcrumb-nav">
+      <button class="back-btn" @click="goBack">
         ← Back
       </button>
       <span class="breadcrumb">
         {{ selectedBook?.name }}
-        <span v-if="selectedChapter"> - Chapter {{ selectedChapter.chapter }}</span>
+        <span v-if="selectedChapterIndex !== null"> - Chapter {{ selectedChapterIndex + 1 }}</span>
       </span>
     </nav>
 
     <!-- Loading State -->
     <div v-if="isLoading" class="loading-state">
-      <div class="spinner"></div>
+      <div class="spinner" />
       <p>Loading Bible...</p>
     </div>
 
     <!-- Books View -->
     <div v-else-if="currentView === 'books'" class="books-view">
       <div class="search-section">
-        <input 
+        <input
           v-model="searchQuery"
           type="text"
           placeholder="Search books..."
           class="search-input"
-        />
+        >
       </div>
-      
+
       <div class="books-grid">
-        <div 
-          v-for="book in filteredBooks" 
-          :key="book.name"
+        <div
+          v-for="book in filteredBooks"
+          :key="book.abbrev"
           class="book-card"
           @click="selectBook(book)"
         >
-          <h3 class="book-name">{{ book.name }}</h3>
-          <p class="book-abbr">{{ book.abbreviation }}</p>
-          <p class="book-chapters">{{ book.chapters.length }} chapters</p>
+          <h3 class="book-name">
+            {{ book.abbrev.toUpperCase() }}
+          </h3>
+          <p class="book-abbr">
+            {{ book.name }}
+          </p>
+          <p class="book-chapters">
+            {{ book.chapters.length }} chapters
+          </p>
         </div>
       </div>
     </div>
@@ -164,14 +159,18 @@ const shareVerse = (book: Book, chapter: Chapter, verse: Verse) => {
     <!-- Chapter View -->
     <div v-else-if="currentView === 'chapter' && selectedBook" class="chapter-view">
       <div class="chapters-grid">
-        <div 
-          v-for="chapter in selectedBook.chapters" 
-          :key="chapter.chapter"
+        <div
+          v-for="(chapter, chapterIndex) in selectedBook.chapters"
+          :key="chapterIndex"
           class="chapter-card"
-          @click="selectChapter(chapter)"
+          @click="selectChapter(chapterIndex)"
         >
-          <h3 class="chapter-number">Chapter {{ chapter.chapter }}</h3>
-          <p class="chapter-verses">{{ chapter.verses.length }} verses</p>
+          <h3 class="chapter-number">
+            Chapter {{ chapterIndex + 1 }}
+          </h3>
+          <p class="chapter-verses">
+            {{ chapter.length }} verses
+          </p>
         </div>
       </div>
     </div>
@@ -179,20 +178,22 @@ const shareVerse = (book: Book, chapter: Chapter, verse: Verse) => {
     <!-- Verse View -->
     <div v-else-if="currentView === 'verse' && selectedChapter" class="verse-view">
       <div class="verses-list">
-        <div 
-          v-for="verse in selectedChapter.verses" 
-          :key="verse.verse"
+        <div
+          v-for="(verseText, verseIndex) in selectedChapter"
+          :key="verseIndex"
           class="verse-card"
         >
           <div class="verse-content">
-            <span class="verse-number">{{ verse.verse }}</span>
-            <p class="verse-text">{{ verse.text }}</p>
-            <button 
-              @click="shareVerse(selectedBook!, selectedChapter!, verse)"
-              class="share-btn"
-              title="Share verse"
+            <span class="verse-number">{{ verseIndex + 1 }}</span>
+            <p class="verse-text">
+              {{ verseText }}
+            </p>
+            <button
+              class="copy-btn"
+              title="Copy verse"
+              @click="copyVerse(selectedBook!, selectedChapterIndex, verseIndex, verseText)"
             >
-              📤
+              📋
             </button>
           </div>
         </div>
@@ -202,7 +203,9 @@ const shareVerse = (book: Book, chapter: Chapter, verse: Verse) => {
     <!-- Footer -->
     <footer class="app-footer">
       <p>📖 Holy Bible App - Offline Access</p>
-      <p class="footer-note">Powered by Bastyon Mini-App Template</p>
+      <p class="footer-note">
+        Powered by Bastyon Mini-App Template
+      </p>
     </footer>
   </div>
 </template>
@@ -275,8 +278,12 @@ const shareVerse = (book: Book, chapter: Chapter, verse: Verse) => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .search-section {
@@ -297,34 +304,42 @@ const shareVerse = (book: Book, chapter: Chapter, verse: Verse) => {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.books-grid, .chapters-grid {
+.books-grid,
+.chapters-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
   padding: 1rem;
 }
 
-.book-card, .chapter-card {
+.book-card,
+.chapter-card {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   padding: 1.5rem;
   text-align: center;
   cursor: pointer;
-  transition: transform 0.3s, background 0.3s;
+  transition:
+    transform 0.3s,
+    background 0.3s;
 }
 
-.book-card:hover, .chapter-card:hover {
+.book-card:hover,
+.chapter-card:hover {
   transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.2);
 }
 
-.book-name, .chapter-number {
+.book-name,
+.chapter-number {
   font-size: 1.2rem;
   font-weight: bold;
   margin: 0 0 0.5rem 0;
 }
 
-.book-abbr, .book-chapters, .chapter-verses {
+.book-abbr,
+.book-chapters,
+.chapter-verses {
   opacity: 0.8;
   margin: 0;
 }
@@ -349,6 +364,8 @@ const shareVerse = (book: Book, chapter: Chapter, verse: Verse) => {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
+  margin-bottom: 0.5rem;
+  text-align: left;
 }
 
 .verse-number {
@@ -367,9 +384,10 @@ const shareVerse = (book: Book, chapter: Chapter, verse: Verse) => {
   flex: 1;
   margin: 0;
   line-height: 1.6;
+  text-align: left;
 }
 
-.share-btn {
+.copy-btn {
   background: none;
   border: none;
   font-size: 1.2rem;
@@ -378,7 +396,7 @@ const shareVerse = (book: Book, chapter: Chapter, verse: Verse) => {
   transition: opacity 0.3s;
 }
 
-.share-btn:hover {
+.copy-btn:hover {
   opacity: 1;
 }
 
@@ -395,10 +413,11 @@ const shareVerse = (book: Book, chapter: Chapter, verse: Verse) => {
 }
 
 @media (max-width: 768px) {
-  .books-grid, .chapters-grid {
+  .books-grid,
+  .chapters-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .verse-content {
     flex-direction: column;
     align-items: flex-start;
