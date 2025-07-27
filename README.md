@@ -27,46 +27,24 @@ tags:
 
 ---
 
-## Features
+## ✨ Features
 
-- 🚀 [Vue 3](https://github.com/vuejs/core), [Vite](https://github.com/vitejs/vite), [pnpm](https://pnpm.io/) - Fast and modern front-end tools
-- 🌐 [Bastyon SDK](https://bastyon.com/application?id=app.pocketnet.docs&p=6465762f617070732f6d696e69617070732f73646b2e68746d6c) - Decentralized, censorship-resistant platform integration
-- 🔒 **Privacy-First** - Automatic Tor routing for external requests when available
-- 📂 [File-based routing](./src/pages) - Auto-configured routing
-- 📥 [Components auto importing](./src/components) - Automatically import components
-- ⚡ **Zero Configuration** - Works out of the box with enhanced privacy
+- 📖 **Complete Bible** - King James Version with 66 books and 31,102 verses
+- 📱 **Offline Access** - Entire Bible stored locally for offline reading
+- 🔍 **Search** - Quick book and chapter search functionality
+- 📤 **Share Verses** - Share your favorite verses with others
+- 🎨 **Beautiful UI** - Modern, responsive design with smooth animations
+- ⚡ **Fast Loading** - Optimized for quick access to scriptures
+- 🌐 **Cross-Platform** - Works on all devices supporting Bastyon mini-apps
 
----
+## 🚀 Quick Start
 
-## **Directory Structure**
+### Prerequisites
 
-```bash
-src/
-├── composables/
-│   ├── sdkService.ts     # Contains logic for interacting with the Bastyon SDK
-│   ├── dark.ts           # Handles dark mode toggle functionality
-│   └── index.ts          # Exports utilities and composables from the directory
-├── components/
-│   ├── TheFooter.vue     # Footer component for the app
-│   ├── TheCounter.vue    # Counter component
-│   └── TheInput.vue      # Input component for handling user inputs
-├── pages/
-│   ├── index.vue         # Main page of the application
-│   ├── [...all].vue      # Catch-all route handler
-│   └── hi/[name].vue     # Dynamic route for user-specific pages
-├── router/
-│   └── index.ts          # Vue Router configuration
-├── styles/
-│   └── main.css          # Global styles for the application
-├── App.vue               # Root Vue component
-└── main.ts               # Entry point of the application
-public/
-├── miniapp-service-worker.js  # Service Worker for request proxying
-├── b_manifest.json            # Mini-app metadata
-└── b_icon.png                 # Application icon
-```
+- Node.js 18+
+- pnpm (recommended) or npm
 
----
+### Development
 
 ## **Bastyon SDK**
 
