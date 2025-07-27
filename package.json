@@ -18,7 +18,9 @@
     "postinstall": "npx simple-git-hooks"
   },
   "dependencies": {
+    "@types/qrcode": "^1.5.5",
     "@vueuse/core": "^10.9.0",
+    "qrcode": "^1.5.4",
     "vue": "^3.4.27",
     "vue-router": "^4.3.2"
   },
