@@ -147,4 +147,165 @@ export class SdkService {
       throw error
     }
   }
+
+  /**
+   * Gets the current user's wallet balance
+   * @returns Promise<number> The balance in PKTC
+   * @example
+   * const balance = await SdkService.getBalance();
+   */
+  public static async getBalance(): Promise<number> {
+    this.ensureInitialized()
+    try {
+      const result = await this.sdk!.rpc('getbalance')
+      return typeof result === 'number' ? result : 0
+    }
+    catch (error) {
+      console.error('Error fetching balance:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Gets the user's wallet address
+   * @returns Promise<string> The wallet address
+   * @example
+   * const address = await SdkService.getAddress();
+   */
+  public static async getAddress(): Promise<string> {
+    this.ensureInitialized()
+    try {
+      const result = await this.sdk!.rpc('getaccountaddress', [''])
+      return typeof result === 'string' ? result : ''
+    }
+    catch (error) {
+      console.error('Error fetching address:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Sends a payment to a specified address
+   * @param toAddress The recipient address
+   * @param amount The amount to send in PKTC
+   * @param comment Optional comment for the transaction
+   * @returns Promise<string> The transaction ID
+   * @example
+   * const txId = await SdkService.sendPayment('PxAddress...', 10.5, 'Payment for goods');
+   */
+  public static async sendPayment(toAddress: string, amount: number, comment?: string): Promise<string> {
+    this.ensureInitialized()
+    try {
+      const parameters = comment
+        ? [toAddress, amount, comment]
+        : [toAddress, amount]
+
+      const result = await this.sdk!.rpc('sendtoaddress', parameters)
+      return typeof result === 'string' ? result : ''
+    }
+    catch (error) {
+      console.error('Error sending payment:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Gets transaction history for the current user
+   * @param count Number of transactions to retrieve (default: 10)
+   * @returns Promise<Array> Array of transaction objects
+   * @example
+   * const transactions = await SdkService.getTransactionHistory(20);
+   */
+  public static async getTransactionHistory(count = 10): Promise<any[]> {
+    this.ensureInitialized()
+    try {
+      const result = await this.sdk!.rpc('listtransactions', ['', count])
+      return Array.isArray(result) ? result : []
+    }
+    catch (error) {
+      console.error('Error fetching transaction history:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Validates a Bastyon address
+   * @param address The address to validate
+   * @returns Promise<boolean> True if address is valid
+   * @example
+   * const isValid = await SdkService.validateAddress('PxAddress...');
+   */
+  public static async validateAddress(address: string): Promise<boolean> {
+    this.ensureInitialized()
+    try {
+      const result = await this.sdk!.rpc('validateaddress', [address])
+      return result && typeof result === 'object' && 'isvalid' in result
+        ? (result as any).isvalid
+        : false
+    }
+    catch (error) {
+      console.error('Error validating address:', error)
+      return false
+    }
+  }
+
+  /**
+   * Gets network information
+   * @returns Promise<object> Network information
+   * @example
+   * const networkInfo = await SdkService.getNetworkInfo();
+   */
+  public static async getNetworkInfo(): Promise<any> {
+    this.ensureInitialized()
+    try {
+      const result = await this.sdk!.rpc('getnetworkinfo')
+      return result || {}
+    }
+    catch (error) {
+      console.error('Error fetching network info:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Creates a new address for receiving payments
+   * @param label Optional label for the address
+   * @returns Promise<string> The new address
+   * @example
+   * const newAddress = await SdkService.getNewAddress('Payment address');
+   */
+  public static async getNewAddress(label?: string): Promise<string> {
+    this.ensureInitialized()
+    try {
+      const parameters = label ? [label] : []
+      const result = await this.sdk!.rpc('getnewaddress', parameters)
+      return typeof result === 'string' ? result : ''
+    }
+    catch (error) {
+      console.error('Error creating new address:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Estimates transaction fee
+   * @param _toAddress The recipient address
+   * @param _amount The amount to send
+   * @returns Promise<number> Estimated fee in PKTC
+   * @example
+   * const fee = await SdkService.estimateFee('PxAddress...', 10.5);
+   */
+  public static async estimateFee(_toAddress: string, _amount: number): Promise<number> {
+    this.ensureInitialized()
+    try {
+      // This is a simplified fee estimation
+      // In reality, you might use 'estimatefee' or similar RPC calls
+      const result = await this.sdk!.rpc('estimatefee', [1])
+      return typeof result === 'number' ? result : 0.0001 // fallback to minimal fee
+    }
+    catch (error) {
+      console.error('Error estimating fee:', error)
+      return 0.0001 // fallback to minimal fee
+    }
+  }
 }
